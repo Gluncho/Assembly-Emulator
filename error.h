@@ -12,5 +12,13 @@
         exit(0);\
         }
 
+#define ERROR_FUNC_NOT_FOUND(name) \
+        {cout<< \
+        "ERROR: Couldn't find the function named " \ 
+        <<func_name<<endl;}
 
+#define CHECK_SP if(SP < 0) { \
+        cout<<"ERROR: Stack overflow occured. The program will now terminate."<<endl; \
+        exit(0);\
+        }
 #endif

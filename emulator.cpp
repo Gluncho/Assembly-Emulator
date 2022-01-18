@@ -1,17 +1,22 @@
 #include <bits/stdc++.h>
 #include "error.h"
+#include "keywords.h"
 
 using namespace std;
 
+/* Mapping Function names to its addresses */
 map<string,int> functions;
 vector<string> lines;
+// stack
+char M[MEMORY_SIZE];
 
+int SP = MEMORY_SIZE - 1, RV, PC;
 void help(); 
 void process_file(char* filename);
 void read_file(char* filename);
 void execute_file();
 void read_functions();
-void execute_main_function();
+void execute_function(string func_name);
 
 string trim(string& line);
 bool is_function_declaration(string& line, string& func_name);
@@ -38,6 +43,7 @@ void read_file(char* filename){
     if(!file) ERROR_NO_FILE_FOUND
     string line;
     while(getline(file,line)){
+        if(line == "" || trim(line) == "") continue;
         lines.push_back(trim(line));
     }
 }
@@ -51,16 +57,13 @@ string trim(string& line){
 }
 void execute_file(){
     read_functions();
-    for(auto func : functions){
-        cout<<func.first<<" "<<func.second<<endl;
-    }
-    execute_main_function();
+    execute_function(MAIN);
 }
 
 void read_functions(){
     for(int i = 0; i < lines.size(); i++){
         string func_name = "";
-        if(is_function_declaration(lines[i],func_name)){
+        if(is_function_declaration(lines[i], func_name)){
             if(functions.count(func_name)) ERROR_REDECLARATION_OF_FUNCTION(func_name)
             // Map function name to its respective line
             functions[func_name] = i;
@@ -69,7 +72,12 @@ void read_functions(){
     }
 }
 
-void execute_main_function(){
+void execute_function(string func_name){
+    if(functions.count(func_name) == 0) ERROR_FUNC_NOT_FOUND(func_name)
+    
+}
+
+void process_line(string line){
     
 }
 void help(){
