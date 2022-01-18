@@ -1,0 +1,15 @@
+print:
+sp=sp-4
+rv = 5
+ret
+main:
+lol
+lmao
+ret
+printf:
+bruh
+kek
+ret
+print:
+lol
+ret
