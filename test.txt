@@ -1,15 +1,12 @@
-print:
-sp=sp-4
-rv = 5
-ret
 main:
-lol
-lmao
-ret
-printf:
-bruh
-kek
-ret
-print:
-lol
-ret
+SP = SP + 8
+R1 = M[SP]
+R2 = M[SP+4]
+BGE R1 R2 PC+8
+RET
+holyfk:
+CALL <h>
+SP = SP - 8
+RET
+h:
+RET
