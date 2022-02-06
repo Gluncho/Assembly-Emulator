@@ -7,7 +7,7 @@ using namespace std;
 /* Mapping Function names to its addresses */
 map<string,int> functions;
 vector<string> lines;
-// stack
+//stack
 char M[MEMORY_SIZE];
 // registers
 map<string,int> registers;
@@ -20,15 +20,24 @@ void read_file(char* filename);
 void execute_file();
 void read_functions();
 void execute_function(string func_name);
-void process_line(string& line);
-string trim(string line);
+void execute_branch(string& line);
+void store(string& line);
+void load(string& line);
+
+void process_line();
+void call_function(string& line);
 bool is_function_declaration(string& line, string& func_name);
 line_type get_line_type(string& line);
+
+
+/* helper methods for lines */
+string trim(string line, char delim = ' ');
 string* split_by(string str, char splitter);
-void call_function(string& line);
 vector<string> multisplit(string str, char delim = ' ');
 int eval(string expr);
+int get_value(string& number);
 
+bool is_cast(string& cast);
 bool is_valid_call(string& line);
 bool is_valid_branch(string& line);
 bool is_valid_store(string& lhs, string& rhs);
@@ -68,14 +77,15 @@ void read_file(char* filename){
 }
 
 /**
- * Cuts the extra space symbols at the beggining and the end of the string.
+ * Cuts the extra symbols at the beggining and the end of the string.
  * @param line string to be trimmed
+ * @param delim symbol to be cut
  * @return string - Trimmed version of line @line
  */
-string trim(string line){
+string trim(string line, char delim){
     int start = 0, end = line.size()-1;
-    while(start < line.size() && line[start]==' ') start++;
-    while(end >= 0  && line[end]==' ') end--;
+    while(start < line.size() && line[start]==delim) start++;
+    while(end >= 0  && line[end]==delim) end--;
     if(start > end) return "";
     return line.substr(start, end - start + 1);
 }
@@ -111,23 +121,27 @@ void execute_function(string func_name){
     registers[SP] -= sizeof(int); CHECK_SP
     memcpy(&M[registers[SP]], &registers[PC], sizeof(int)); // SAVED PC
     registers[PC] = current_line_num * 4;
-    while(lines[++current_line_num] != RET){
-        process_line(lines[current_line_num]);
+    while(lines[line_num] != RET){
+        process_line();
     }
     cout<<"Exiting function "<<func_name<<endl;
     registers[PC] = *(int*)&M[registers[SP]];
     registers[SP] += sizeof(int); 
 }
 
-void process_line(string& line){
+void process_line(){
     registers[PC] += 4;
-    cout<<"Executing Line :: "<<line_num<<";;;; Line : "<<line<<endl;
-    line_type type = get_line_type(line);
+    cout<<"Executing Line :: "<<line_num<<";;;; Line : "<<lines[line_num - 1]<<endl;
+    line_type type = get_line_type(lines[line_num - 1]);
     if(type == INVALID) ERROR_INVALID_LINE
     else if(type == CALL){
-        call_function(line);
+        call_function(lines[line_num - 1]);
     }else if(type == BRANCH){
-        //execute_branch(line);
+        execute_branch(lines[line_num - 1]);
+    }else if(type == STORE){
+        store(lines[line_num - 1]);
+    }else if(type == LOAD){
+        //load(lines[line_num - 1]);
     }
 }
 
@@ -141,7 +155,7 @@ line_type get_line_type(string& line){
     string lhs = splitted[0];
     string rhs = splitted[1];
     if(is_valid_store(lhs,rhs)){
-        free(splitted);
+        delete[] splitted;
         return STORE;
     }
     return INVALID;
@@ -161,9 +175,13 @@ bool is_function_declaration(string& line, string& func_name){
     return true;
 }
 
+bool is_cast(string& cast){
+    return cast == to_char || cast == to_short;
+}
+
 bool is_number(string text){
     for(int i = 0; i < text.size(); i++){
-        if(text[i] < '0' || text[i] > '9') return false;
+        if((text[i] < '0') || (text[i] > '9')) return false;
     }
     return true;
 }
@@ -171,7 +189,8 @@ bool is_number(string text){
 bool is_register(string& str){
     if(str == RV || str == SP || str == PC) return true;
     if(str.length() < REGISTER_NAME_STR.size()) return false;
-    if(str.substr(0, REGISTER_NAME_STR.size()) == REGISTER_NAME_STR && is_number(str.substr(1))) return true;
+    if(str.substr(0, REGISTER_NAME_STR.size()) == REGISTER_NAME_STR 
+        && is_number(str.substr(REGISTER_NAME_STR.size()))) return true;
     return false;
 }
 bool is_number_or_register(string& str){
@@ -202,7 +221,15 @@ bool is_valid_branch(string& line){
 }
 
 bool is_valid_store(string& lhs, string& rhs){
-    return false;
+    if(lhs.size() < STACK_NAME_STR.size() || lhs.substr(0,STACK_NAME_STR.size()) != STACK_NAME_STR) return false;
+    string memo_index = lhs.substr(STACK_NAME_STR.size());
+    if(memo_index.front() != '[' || memo_index.back() != ']') return false;
+    string actual_index = memo_index.substr(1,memo_index.length() - 2);
+    vector<string> split = multisplit(rhs);
+    bool is_valid = is_number_or_register(actual_index);
+    is_valid = is_valid && ((split.size() == 1 && is_number_or_register(split[0])) ||
+                            (split.size() == 2 && is_cast(split[0]) && is_number_or_register(split[1])));
+    return is_valid;
 }
 
 /**
@@ -261,10 +288,44 @@ void execute_branch(string& line){
     for(int i = 3; i < splitted.size(); i++){
         expression += splitted[i];
     }
-    while(splitted.size() > 3) splitted.pop_back();
-    int toJump = eval(expression) - 4;
-    registers[PC] += toJump;
+    int toJump = eval(expression);
+    //cout<<registers[PC]<< " IS PC. jumping on "<<toJump<<endl;
+    int LHS = is_number(splitted[1]) ? stoi(splitted[1]) : registers[splitted[1]];
+    int RHS = is_number(splitted[2]) ? stoi(splitted[2]) : registers[splitted[2]];
+    bool branch_should_jump = false;
+    string brc = splitted[0];
+    if(brc == BGE && LHS >= RHS) branch_should_jump = true;
+    else if(brc == BGT && LHS > RHS) branch_should_jump = true;
+    else if(brc == BLE && LHS <= RHS) branch_should_jump = true;
+    else if(brc == BLT && LHS < RHS) branch_should_jump = true;
+    else if(brc == BEQ && LHS == RHS) branch_should_jump = true;
+    else if(brc == BNE && LHS != RHS) branch_should_jump = true;
+    if(branch_should_jump){
+            registers[PC] = toJump - INSTRUCTION_SIZE;
+    }
 }
+
+int get_value(string& number) {
+    return is_number(number) ? stoi(number) : registers[number];
+}
+
+void store(string& line){
+    string LHS = trim(multisplit(line,'=')[0]);
+    string RHS = multisplit(line, '=')[1];
+    string memo_index = LHS.substr(STACK_NAME_STR.size() + 1, LHS.size() - STACK_NAME_STR.size() - 2);
+    int memo_ind = get_value(memo_index);
+    vector<string> split = multisplit(RHS);
+    int to_assign;
+    if(split.size() == 1) to_assign = get_value(split[0]);
+    else if(split[0] == to_char){
+        to_assign = (char) get_value(split[1]);
+    }else if(split[0] == to_short){
+        to_assign = (short) get_value(split[1]);
+    }
+    M[memo_ind] = to_assign;
+    cout<<"memo index is "<< (int)M[memo_ind]<<endl;
+}
+
 
 int eval(string expr){
     if(is_number(expr)) return stoi(expr);
@@ -287,7 +348,6 @@ int eval(string expr){
     if(is_number(rhs)) RHS = stoi(rhs);
     else if(is_register(rhs)) RHS = registers[rhs];
     else ERROR_INVALID_LINE
-    
     if(oper == '-') return LHS - RHS;
     else if(oper == '+') return LHS + RHS;
     else if(oper == '*') return LHS * RHS;

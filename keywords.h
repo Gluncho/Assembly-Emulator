@@ -4,6 +4,7 @@
 using namespace std;
 
 #define MEMORY_SIZE 10000
+#define INSTRUCTION_SIZE 4
 #define MAIN "main"
 #define RET "RET"
 
@@ -11,6 +12,9 @@ char ops[] = {'-', '+', '*', '/'};
 const string CALL_STR = "CALL";
 const string STACK_NAME_STR = "M";
 const string REGISTER_NAME_STR = "R";
+
+const string to_char = ".1";
+const string to_short = ".2";
 
 // BRANCHES
 const string BGE = "BGE";

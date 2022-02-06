@@ -1,12 +1,11 @@
 main:
-SP = SP + 8
-R1 = M[SP]
+CALL <holyfk>
+M[2] = .1 129
 R2 = M[SP+4]
-BGE R1 R2 PC+8
+R3 = R2 + 4
 RET
 holyfk:
-CALL <h>
-SP = SP - 8
+BEQ 2 2 PC - 20
 RET
 h:
 RET
