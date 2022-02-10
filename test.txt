@@ -1,6 +1,7 @@
 main:
+SP = SP - 16
 CALL <holyfk>
-M[2] = .1 129
+M[PC +2]  = .1 256
 R2 = M[SP+4]
 R3 = R2 + 4
 RET

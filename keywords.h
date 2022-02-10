@@ -3,11 +3,16 @@
 
 using namespace std;
 
+#define HELP "-h"
+
 #define MEMORY_SIZE 10000
 #define INSTRUCTION_SIZE 4
+#define CAST_SIZE 2
 #define MAIN "main"
 #define RET "RET"
 
+#define OPEN_BRACKET '['
+#define CLOSED_BRACKET ']'
 char ops[] = {'-', '+', '*', '/'};
 const string CALL_STR = "CALL";
 const string STACK_NAME_STR = "M";

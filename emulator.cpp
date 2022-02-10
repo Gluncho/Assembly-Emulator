@@ -23,6 +23,7 @@ void execute_function(string func_name);
 void execute_branch(string& line);
 void store(string& line);
 void load(string& line);
+void perform_alu(string& line);
 
 void process_line();
 void call_function(string& line);
@@ -32,7 +33,9 @@ line_type get_line_type(string& line);
 
 /* helper methods for lines */
 string trim(string line, char delim = ' ');
+string remove_spaces(string& str);
 string* split_by(string str, char splitter);
+int indexOf(string& str, char target);
 vector<string> multisplit(string str, char delim = ' ');
 int eval(string expr);
 int get_value(string& number);
@@ -48,7 +51,7 @@ int main(int argc, char* argv[]){
     if (argc == 1){
         cout<<"Please enter the file you want to execute, or use \"-h\" flag to get more information."<<endl;
     }else if (argc == 2){
-        if(strlen(argv[1]) == 2 && strcmp(argv[1],"-h") == 0){
+        if(strlen(argv[1]) == 2 && strcmp(argv[1],HELP) == 0){
             help();
         }else process_file(argv[1]);
     }
@@ -93,7 +96,7 @@ string trim(string line, char delim){
 void execute_file(){
     read_functions();
     registers[SP] = MEMORY_SIZE - 1;
-    if(functions.find(MAIN) != functions.end()) registers[PC] = functions[MAIN] + 4;
+    if(functions.find(MAIN) != functions.end()) registers[PC] = functions[MAIN] + INSTRUCTION_SIZE;
 
     cout<<"----------------- STARTING EXECUTION -----------------"<<endl;
     clock_t begin = clock();
@@ -110,27 +113,28 @@ void read_functions(){
         if(is_function_declaration(lines[i], func_name)){
             if(functions.count(func_name)) ERROR_REDECLARATION_OF_FUNCTION(func_name)
             // Map function name to its respective line
-            functions[func_name] = i * 4;
+            functions[func_name] = i * INSTRUCTION_SIZE;
         } 
     }
 }
 
 void execute_function(string func_name){
     if(functions.count(func_name) == 0) ERROR_FUNC_NOT_FOUND(func_name)
-    int current_line_num = functions[func_name] / 4;
+    int current_line_num = functions[func_name] / INSTRUCTION_SIZE;
     registers[SP] -= sizeof(int); CHECK_SP
     memcpy(&M[registers[SP]], &registers[PC], sizeof(int)); // SAVED PC
-    registers[PC] = current_line_num * 4;
+    if(func_name == MAIN) cout<<*(int*)&M[registers[SP]]<<" is saved pc for main"<<endl;
+    registers[PC] = current_line_num * INSTRUCTION_SIZE;
     while(lines[line_num] != RET){
         process_line();
     }
-    cout<<"Exiting function "<<func_name<<endl;
+    //cout<<"Exiting function "<<func_name<<endl;
     registers[PC] = *(int*)&M[registers[SP]];
     registers[SP] += sizeof(int); 
 }
 
 void process_line(){
-    registers[PC] += 4;
+    registers[PC] += INSTRUCTION_SIZE;
     cout<<"Executing Line :: "<<line_num<<";;;; Line : "<<lines[line_num - 1]<<endl;
     line_type type = get_line_type(lines[line_num - 1]);
     if(type == INVALID) ERROR_INVALID_LINE
@@ -141,7 +145,9 @@ void process_line(){
     }else if(type == STORE){
         store(lines[line_num - 1]);
     }else if(type == LOAD){
-        //load(lines[line_num - 1]);
+        load(lines[line_num - 1]);
+    }else if(type == ALU){
+        perform_alu(lines[line_num - 1]);
     }
 }
 
@@ -157,6 +163,10 @@ line_type get_line_type(string& line){
     if(is_valid_store(lhs,rhs)){
         delete[] splitted;
         return STORE;
+    }else if(is_valid_load(lhs,rhs)){
+        return LOAD;
+    }else if(is_valid_alu(lhs,rhs)){
+        return ALU;
     }
     return INVALID;
 }
@@ -193,14 +203,45 @@ bool is_register(string& str){
         && is_number(str.substr(REGISTER_NAME_STR.size()))) return true;
     return false;
 }
+
 bool is_number_or_register(string& str){
     return is_number(str) || is_register(str);
+}
+
+/**
+ * @brief 
+ * Checks whether the expression is valid or not,
+ * based on the value of @p is_alu
+ * @param expr expression that must be checked
+ * @param is_alu boolean expressing whether @p expr should be checked for 
+ * ALU operation ( @p is_alu = \c true ) or LOAD operation ( @p is_alu = \c false ).
+ * @return true if expression is just a register, just a constant, or 
+ * operation between register and a constant
+ * @return false otherwise
+ */
+bool is_valid_expression(string& expr, bool is_alu = false){
+    if(is_number_or_register(expr)) return true;
+    // otherwise, it must be an operation between a constant and a register
+    string concatenated = remove_spaces(expr);
+    int oper_index = -1;
+    for(char op : ops){
+        int ind = indexOf(concatenated, op);
+        if(ind != -1){
+            oper_index =  ind;
+            break;
+        }
+    }
+    if(oper_index == -1) return false;
+    string LHS = concatenated.substr(0,oper_index);
+    string RHS = concatenated.substr(oper_index + 1);
+    if(!is_alu && is_register(LHS) && is_register(RHS)) return false;
+    return is_number_or_register(LHS) && is_number_or_register(RHS);
 }
 
 bool is_valid_call(string& line){
     if(line.size() < CALL_STR.size()) return false;
     if(line.substr(0, CALL_STR.size()) != CALL_STR) return false;
-    string func = trim(line.substr(CALL_STR.size()+1));
+    string func = trim(line.substr(CALL_STR.size() + 1));
     if(func == "") ERROR_INVALID_CALL
     if(func.front() == '<' && func.back() == '>'){
         if(functions.count(func.substr(1,func.size()-2)) == 0) ERROR_INVALID_CALL
@@ -213,7 +254,7 @@ bool is_valid_call(string& line){
 bool is_valid_branch(string& line){
     if(line.size() < BGE.size()) return false;
     vector<string> splitted = multisplit(line);
-    if(splitted.size()<4 || splitted.size() > 6) return false;
+    if(splitted.size() < 4 || splitted.size() > 6) return false;
     string brc = splitted[0];
     if(!(brc == BGE || brc == BGT || brc == BLE || brc == BLT || brc == BNE || brc ==BEQ )) return false;
     if(!is_number_or_register(splitted[1]) || !is_number_or_register(splitted[2])) return false;
@@ -223,13 +264,56 @@ bool is_valid_branch(string& line){
 bool is_valid_store(string& lhs, string& rhs){
     if(lhs.size() < STACK_NAME_STR.size() || lhs.substr(0,STACK_NAME_STR.size()) != STACK_NAME_STR) return false;
     string memo_index = lhs.substr(STACK_NAME_STR.size());
-    if(memo_index.front() != '[' || memo_index.back() != ']') return false;
+    if(memo_index.front() != OPEN_BRACKET || memo_index.back() != CLOSED_BRACKET) return false;
     string actual_index = memo_index.substr(1,memo_index.length() - 2);
     vector<string> split = multisplit(rhs);
-    bool is_valid = is_number_or_register(actual_index);
+    bool is_valid = is_valid_expression(actual_index);
     is_valid = is_valid && ((split.size() == 1 && is_number_or_register(split[0])) ||
                             (split.size() == 2 && is_cast(split[0]) && is_number_or_register(split[1])));
     return is_valid;
+}
+
+/**
+ * \brief 
+ * Checks whether the expression is valid \a load operation.
+ * \note function is space-friendly
+ * @param lhs 
+ * @param rhs 
+ * @return true if @p lhs and @p rhs form a valid load operation
+ * @return false otherwise
+ */
+bool is_valid_load(string& lhs, string& rhs){
+    if(is_register(lhs) == false) return false; // LHS should be a register
+    string expr = rhs;
+    string cast = expr.length() >= CAST_SIZE ? expr.substr(0, CAST_SIZE) : "";
+    if(cast != "" && is_cast(cast)){
+        string expr_without_cast = expr.substr(CAST_SIZE);
+        expr = remove_spaces(expr_without_cast); //trim casting so we can check the rest of the expression
+    }
+    //expression must be something like M[....]
+    if(expr.size() < (STACK_NAME_STR.size() + 2) || expr.substr(0, STACK_NAME_STR.size()) != STACK_NAME_STR) return false;
+    if(expr[STACK_NAME_STR.size()] != OPEN_BRACKET || expr.back() != CLOSED_BRACKET) return false;
+    //there must be an expression between brackets
+    expr = expr.substr(STACK_NAME_STR.size() + 1, expr.size() - STACK_NAME_STR.size() - 2);
+    return is_valid_expression(expr);
+}
+
+/**
+ * @brief 
+ * Checks whether the expression is valid \a ALU operation.
+ * @param lhs 
+ * @param rhs 
+ * @return true if @p lhs and @p rhs form a valid ALU operation.
+ * @return false otherwise
+ */
+bool is_valid_alu(string& lhs, string& rhs){
+    if(is_register(lhs) == false) return false; //LHS should be a register
+    string cast = rhs.length() >= CAST_SIZE ? rhs.substr(0, CAST_SIZE) : "";
+    if(cast != "" && is_cast(cast)){
+        string rhs_without_cast = trim(rhs.substr(CAST_SIZE));
+        return is_number_or_register(rhs_without_cast);
+    }
+    return is_valid_expression(rhs, true);
 }
 
 /**
@@ -243,13 +327,21 @@ bool is_valid_store(string& lhs, string& rhs){
  */
 string* split_by(string str, char splitter){
     string* ans = NULL;
-    for(int i = 1; i < str.length()-1; i++){
+    for(int i = 1; i < str.length() - 1; i++){
         if(str[i] == splitter){
             ans = new string[2];
             ans[0] = trim(str.substr(0,i));
             ans[1] = trim(str.substr(i+1));
             break;
         }
+    }
+    return ans;
+}
+
+string remove_spaces(string& str){
+    string ans = "";
+    for(int i = 0; i < str.size(); i++){
+        if(str[i] != ' ') ans += str[i];
     }
     return ans;
 }
@@ -268,11 +360,24 @@ vector<string> multisplit(string str, char delim){
     if(cur != "") ans.push_back(cur);
     return ans;
 }
-int indexOf(string str, char target){
-    for(int i=0; i<str.length(); i++){
+
+/**
+ * @brief 
+ * Finds the first index of target in a string
+ * @param string 
+ * @param character 
+ * @return int first index of the character in a string. If the character is not found, -1 is returned
+ */
+int indexOf(string& str, char target){
+    for(int i = 0; i < str.length(); i++){
         if(str[i] == target) return i;
     }
     return -1;
+}
+
+
+int get_value(string& number) {
+    return is_number(number) ? stoi(number) : registers[number];
 }
 
 void call_function(string& line){
@@ -305,28 +410,70 @@ void execute_branch(string& line){
     }
 }
 
-int get_value(string& number) {
-    return is_number(number) ? stoi(number) : registers[number];
-}
-
 void store(string& line){
     string LHS = trim(multisplit(line,'=')[0]);
     string RHS = multisplit(line, '=')[1];
     string memo_index = LHS.substr(STACK_NAME_STR.size() + 1, LHS.size() - STACK_NAME_STR.size() - 2);
-    int memo_ind = get_value(memo_index);
+    memo_index = remove_spaces(memo_index);
+    int memo_ind = eval(memo_index);
     vector<string> split = multisplit(RHS);
     int to_assign;
-    if(split.size() == 1) to_assign = get_value(split[0]);
-    else if(split[0] == to_char){
-        to_assign = (char) get_value(split[1]);
-    }else if(split[0] == to_short){
-        to_assign = (short) get_value(split[1]);
+    if(split.size() == 1) {
+        to_assign = get_value(split[0]);
+        *(int*)&M[memo_ind] = to_assign;
     }
-    M[memo_ind] = to_assign;
-    cout<<"memo index is "<< (int)M[memo_ind]<<endl;
+    else if(split[0] == to_char){
+        M[memo_ind] = (char) get_value(split[1]);
+    }else if(split[0] == to_short){
+        *(short*)&M[memo_ind] = (short) get_value(split[1]);
+    }
+    
+    //cout<<"Memory at index "<<memo_ind<<" and is equal to "<< (int)M[memo_ind]<<endl;
 }
 
+void load(string& line){
+    string LHS = trim(multisplit(line,'=')[0]);
+    string RHS = trim(multisplit(line, '=')[1]);
+    string cast = RHS.length() >= CAST_SIZE ? RHS.substr(0, CAST_SIZE) : "";
+    int memo_index;
+    string memo = RHS;
+    if(cast != "" && is_cast(cast)){
+        memo = RHS.substr(CAST_SIZE);
+    }
+    memo = remove_spaces(memo);
+    memo_index = eval(memo.substr(STACK_NAME_STR.size() + 1, memo.size() - STACK_NAME_STR.size() - 2));
+    if(cast == to_char) registers[LHS] = M[memo_index];
+    else if(cast == to_short) registers[LHS] = *(short*)&M[memo_index];
+    else registers[LHS] = *(int*)&M[memo_index];
+    //cout<<"register "<<LHS<<" is now equal to "<<registers[LHS]<<" wow."<<endl;
+}
 
+void perform_alu(string& line){
+    string LHS = trim(multisplit(line,'=')[0]);
+    string RHS = trim(multisplit(line, '=')[1]);
+    string cast = RHS.length() >= CAST_SIZE ? RHS.substr(0, CAST_SIZE) : "";
+    if(is_cast(cast)){
+        int reg_value = registers[trim(RHS.substr(CAST_SIZE))];
+        if(cast == to_char){
+            registers[LHS] = *(char*)&reg_value;
+        }else if(cast == to_short){
+            registers[LHS] = *(short*)&reg_value;
+        }
+    }else{
+        RHS = remove_spaces(RHS);
+        registers[LHS] = eval(RHS);
+    }
+   // cout<<"register "<<LHS<<" now became "<<registers[LHS]<<endl;
+}
+
+/**
+ * @brief 
+ * Evaluates an expression. 
+ * Expression must be either a constant, a valid register,
+ * or an operation between registers/numbers/register and a number.
+ * @param expr string to be evaluated
+ * @return int value of the expression
+ */
 int eval(string expr){
     if(is_number(expr)) return stoi(expr);
     if(registers.find(expr) != registers.end()) return registers[expr];
@@ -345,9 +492,11 @@ int eval(string expr){
     if(is_number(lhs)) LHS = stoi(lhs);
     else if(is_register(lhs)) LHS = registers[lhs];
     else ERROR_INVALID_LINE
+
     if(is_number(rhs)) RHS = stoi(rhs);
     else if(is_register(rhs)) RHS = registers[rhs];
     else ERROR_INVALID_LINE
+
     if(oper == '-') return LHS - RHS;
     else if(oper == '+') return LHS + RHS;
     else if(oper == '*') return LHS * RHS;
