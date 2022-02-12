@@ -1,0 +1,12 @@
+sum:
+R1 = M[SP+4]
+R2 = M[SP+8]
+RV = R1 + R2
+RET
+main:
+SP= SP   - 8
+M[SP] = 100
+M[SP+4] =200
+CALL <sum>
+SP = SP + 8
+RET

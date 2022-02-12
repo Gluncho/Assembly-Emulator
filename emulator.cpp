@@ -1,7 +1,5 @@
-#include <bits/stdc++.h>
-#include "error.h"
-#include "keywords.h"
-
+#include "emulator.h"
+#include "stringhelper.h"
 using namespace std;
 
 /* Mapping Function names to its addresses */
@@ -14,61 +12,59 @@ map<string,int> registers;
 // built-in functions
 set<string> built_in_functions;
 
-void help(); 
-void process_file(char* filename);
-void read_file(char* filename);
-void execute_file();
-void read_functions();
-void execute_function(string func_name);
-void execute_branch(string& line);
-void store(string& line);
-void load(string& line);
-void perform_alu(string& line);
-
-void process_line();
-void call_function(string& line);
-bool is_function_declaration(string& line, string& func_name);
-line_type get_line_type(string& line);
-
-
-/* helper methods for lines */
-string trim(string line, char delim = ' ');
-string remove_spaces(string& str);
-string* split_by(string str, char splitter);
-int indexOf(string& str, char target);
-vector<string> multisplit(string str, char delim = ' ');
-int eval(string expr);
-int get_value(string& number);
-
-bool is_cast(string& cast);
-bool is_valid_call(string& line);
-bool is_valid_branch(string& line);
-bool is_valid_store(string& lhs, string& rhs);
-bool is_valid_alu(string& lhs, string& rhs);
-bool is_valid_load(string& lhs, string& rhs);
+//debugging mode
+bool DEBUG = false;
 
 int main(int argc, char* argv[]){
-    if (argc == 1){
-        cout<<"Please enter the file you want to execute, or use \"-h\" flag to get more information."<<endl;
-    }else if (argc == 2){
-        if(strlen(argv[1]) == 2 && strcmp(argv[1],HELP) == 0){
-            help();
-        }else process_file(argv[1]);
-    }
+    interact_with_user();
     return 0;
 }
 
-void help(){
-    cout<<"Hi. This is an Assembly Emulator. "<<endl;
-    cout<<"If you want to execute an assembly file, you can "<<endl;
+void interact_with_user(){
+    cout<<"---------------------------------------------------------------------------------"<<endl;
+    cout<<"\tEnter a path of a file which you want to be executed, type \"-help\" for more information."<<endl;
+    while(true){
+        cout<<"\tEnter: ";
+        string input;
+        getline(cin,input);
+        input = trim(input);
+        if(input == EXIT) EXIT_CODE;
+        if(input == HELP){
+            help();
+        }else if(starts_with(input, DEBUG_FLAG)){
+            DEBUG = 1;
+            vector<string> sp = multisplit(input);
+            process_file(sp[1]);
+        }else{
+            process_file(input);
+        }
+        registers.clear();
+        functions.clear();
+        lines.clear();
+        DEBUG = 0;
+        memset(M, 0, sizeof(M));
+    }
+   
 }
 
-void process_file(char* filename){
+void help(){
+    cout<<"\t---------------------------------------------------------------------------------"<<endl;
+    cout<<"\t------------------------------------HELP----------------------------------------"<<endl;
+    cout<<"\tThis is an Assembly Emulator. "<<endl;
+    cout<<"\tYou can use it to execute your own assembly code (Note: Should be a valid code that RISC processor uses."<<endl;
+    cout<<"\tIf you don't know the language, see \"Assembly Language Used.txt\" to get a grasp on it."<<endl;
+    cout<<"\tOtherwise, you can either run your own tests, or tests provided in \"tests\" folder"<<endl<<endl;
+    cout<<"\tYou can run file with the debugging flag, which means that for each executed line,\n\tyou're gonna see what really changed in the stack, or registers."<<endl;
+    cout<<"\tTo do that, you can use -dbg flag before entering a filename."<<endl;
+
+}
+
+void process_file(string filename){
     read_file(filename);
     execute_file();
 }
 
-void read_file(char* filename){
+void read_file(string filename){
     ifstream file;
     file.open(filename);
     if(!file) ERROR_NO_FILE_FOUND
@@ -79,23 +75,10 @@ void read_file(char* filename){
     }
 }
 
-/**
- * Cuts the extra symbols at the beggining and the end of the string.
- * @param line string to be trimmed
- * @param delim symbol to be cut
- * @return string - Trimmed version of line @line
- */
-string trim(string line, char delim){
-    int start = 0, end = line.size()-1;
-    while(start < line.size() && line[start]==delim) start++;
-    while(end >= 0  && line[end]==delim) end--;
-    if(start > end) return "";
-    return line.substr(start, end - start + 1);
-}
 
 void execute_file(){
     read_functions();
-    registers[SP] = MEMORY_SIZE - 1;
+    registers[SP] = MEMORY_SIZE;
     if(functions.find(MAIN) != functions.end()) registers[PC] = functions[MAIN] + INSTRUCTION_SIZE;
 
     cout<<"----------------- STARTING EXECUTION -----------------"<<endl;
@@ -104,7 +87,7 @@ void execute_file(){
     clock_t end = clock();
     double elapsed_secs = double(end - begin);
     cout<<"----------------- EXECUTION COMPLETED SUCCESSFULLY.-----------------"<<endl;
-    cout<<"Elapsed(ms) : "<<end-begin<<endl;
+    cout<<"\tElapsed time(ms) : "<<end-begin<<endl;
 }
 
 void read_functions(){
@@ -123,32 +106,54 @@ void execute_function(string func_name){
     int current_line_num = functions[func_name] / INSTRUCTION_SIZE;
     registers[SP] -= sizeof(int); CHECK_SP
     memcpy(&M[registers[SP]], &registers[PC], sizeof(int)); // SAVED PC
-    if(func_name == MAIN) cout<<*(int*)&M[registers[SP]]<<" is saved pc for main"<<endl;
     registers[PC] = current_line_num * INSTRUCTION_SIZE;
     while(lines[line_num] != RET){
         process_line();
     }
-    //cout<<"Exiting function "<<func_name<<endl;
     registers[PC] = *(int*)&M[registers[SP]];
+    if(DEBUG) {
+        cout<<"\tExiting function "<<func_name;
+        if(func_name != MAIN) cout<<" (returning to saved pc: "<<registers[PC]<<").";
+        cout<<endl;
+    }
     registers[SP] += sizeof(int); 
 }
 
 void process_line(){
     registers[PC] += INSTRUCTION_SIZE;
-    cout<<"Executing Line :: "<<line_num<<";;;; Line : "<<lines[line_num - 1]<<endl;
-    line_type type = get_line_type(lines[line_num - 1]);
+    string line = lines[line_num - 1];
+    line_type type = get_line_type(line);
     if(type == INVALID) ERROR_INVALID_LINE
-    else if(type == CALL){
-        call_function(lines[line_num - 1]);
-    }else if(type == BRANCH){
-        execute_branch(lines[line_num - 1]);
-    }else if(type == STORE){
-        store(lines[line_num - 1]);
-    }else if(type == LOAD){
-        load(lines[line_num - 1]);
-    }else if(type == ALU){
-        perform_alu(lines[line_num - 1]);
+    if(DEBUG) {
+        cout<<"\tExecuting Line Number "<<line_num<<". ---------------- Line : \""<<line<<"\""<<endl;
+        displayLineType(type);
     }
+    if(type == CALL){
+        call_function(line);
+    }else if(type == BRANCH){
+        execute_branch(line);
+    }else if(type == STORE){
+        store(line);
+    }else if(type == LOAD){
+        load(line);
+    }else if(type == ALU){
+        perform_alu(line);
+    }else if(type == JUMP){
+        jump(line);
+    }
+    if(DEBUG) cout<<endl<<endl;
+}
+
+void displayLineType(line_type type){
+    string str;
+    if(type == ALU) str = "ALU";
+    else if(type == STORE) str = "STORE";
+    else if (type == LOAD) str = "LOAD";
+    else if(type == CALL) str = "CALL";
+    else if(type == BRANCH) str = "BRANCH";
+    else if(type == JUMP) str = "JUMP";
+    else if(type == INVALID) str = "INVALID";
+    cout<<"\tType of this line is "<<str<<" type."<<endl;
 }
 
 line_type get_line_type(string& line){
@@ -156,6 +161,7 @@ line_type get_line_type(string& line){
     if(splitted == NULL){
         if(is_valid_call(line)) return CALL;
         else if(is_valid_branch(line)) return BRANCH;
+        else if(is_valid_jump(line)) return JUMP;
         return INVALID;
     }
     string lhs = splitted[0];
@@ -171,8 +177,6 @@ line_type get_line_type(string& line){
     return INVALID;
 }
 
-/* If the line is indeed declaring a function, pop its name in func_name variable.
-**/
 bool is_function_declaration(string& line, string& func_name){
     if(line.size() < 2 || line.back() !=':') return false;
     string name = line.substr(0, line.size()-1);
@@ -208,30 +212,19 @@ bool is_number_or_register(string& str){
     return is_number(str) || is_register(str);
 }
 
-/**
- * @brief 
- * Checks whether the expression is valid or not,
- * based on the value of @p is_alu
- * @param expr expression that must be checked
- * @param is_alu boolean expressing whether @p expr should be checked for 
- * ALU operation ( @p is_alu = \c true ) or LOAD operation ( @p is_alu = \c false ).
- * @return true if expression is just a register, just a constant, or 
- * operation between register and a constant
- * @return false otherwise
- */
 bool is_valid_expression(string& expr, bool is_alu = false){
     if(is_number_or_register(expr)) return true;
     // otherwise, it must be an operation between a constant and a register
     string concatenated = remove_spaces(expr);
-    int oper_index = -1;
+    int oper_index = NO_OPERATOR_FOUND;
     for(char op : ops){
-        int ind = indexOf(concatenated, op);
-        if(ind != -1){
+        size_t ind = concatenated.find(op);
+        if(ind != string::npos){
             oper_index =  ind;
             break;
         }
     }
-    if(oper_index == -1) return false;
+    if(oper_index == NO_OPERATOR_FOUND) return false;
     string LHS = concatenated.substr(0,oper_index);
     string RHS = concatenated.substr(oper_index + 1);
     if(!is_alu && is_register(LHS) && is_register(RHS)) return false;
@@ -273,15 +266,6 @@ bool is_valid_store(string& lhs, string& rhs){
     return is_valid;
 }
 
-/**
- * \brief 
- * Checks whether the expression is valid \a load operation.
- * \note function is space-friendly
- * @param lhs 
- * @param rhs 
- * @return true if @p lhs and @p rhs form a valid load operation
- * @return false otherwise
- */
 bool is_valid_load(string& lhs, string& rhs){
     if(is_register(lhs) == false) return false; // LHS should be a register
     string expr = rhs;
@@ -298,83 +282,23 @@ bool is_valid_load(string& lhs, string& rhs){
     return is_valid_expression(expr);
 }
 
-/**
- * @brief 
- * Checks whether the expression is valid \a ALU operation.
- * @param lhs 
- * @param rhs 
- * @return true if @p lhs and @p rhs form a valid ALU operation.
- * @return false otherwise
- */
 bool is_valid_alu(string& lhs, string& rhs){
     if(is_register(lhs) == false) return false; //LHS should be a register
     string cast = rhs.length() >= CAST_SIZE ? rhs.substr(0, CAST_SIZE) : "";
-    if(cast != "" && is_cast(cast)){
+    if(is_cast(cast)){
         string rhs_without_cast = trim(rhs.substr(CAST_SIZE));
         return is_number_or_register(rhs_without_cast);
     }
     return is_valid_expression(rhs, true);
 }
 
-/**
- * @brief Splits the string by a character.
- * Splitting is done WRT first occurence of the character.
- * Passes the ownership of a pointer returned to the user. 
- * Returns NULL if the character is not found.
- * @param str string to be splitted
- * @param splitter character to be splitted by 
- * @return string* - Pointer to the string array of length 2.
- */
-string* split_by(string str, char splitter){
-    string* ans = NULL;
-    for(int i = 1; i < str.length() - 1; i++){
-        if(str[i] == splitter){
-            ans = new string[2];
-            ans[0] = trim(str.substr(0,i));
-            ans[1] = trim(str.substr(i+1));
-            break;
-        }
-    }
-    return ans;
+bool is_valid_jump(string& line){
+    if(!starts_with(line, JUMP_STR)) return false;
+    vector<string> tokenized = multisplit(line);
+    tokenized.erase(tokenized.begin());
+    string pc_address = toString(tokenized);
+    return is_valid_expression(pc_address);
 }
-
-string remove_spaces(string& str){
-    string ans = "";
-    for(int i = 0; i < str.size(); i++){
-        if(str[i] != ' ') ans += str[i];
-    }
-    return ans;
-}
-
-vector<string> multisplit(string str, char delim){
-    vector<string> ans;
-    string cur = "";
-    for(int i = 0; i < str.size(); i++){
-        if(str[i] == delim && cur != ""){
-            ans.push_back(cur);
-            cur = "";
-        }else if(str[i] != delim){
-            cur += str[i];
-        }
-    }
-    if(cur != "") ans.push_back(cur);
-    return ans;
-}
-
-/**
- * @brief 
- * Finds the first index of target in a string
- * @param string 
- * @param character 
- * @return int first index of the character in a string. If the character is not found, -1 is returned
- */
-int indexOf(string& str, char target){
-    for(int i = 0; i < str.length(); i++){
-        if(str[i] == target) return i;
-    }
-    return -1;
-}
-
 
 int get_value(string& number) {
     return is_number(number) ? stoi(number) : registers[number];
@@ -382,7 +306,7 @@ int get_value(string& number) {
 
 void call_function(string& line){
     string name = trim(line.substr(CALL_STR.size() + 1));
-    if(name.front() == '<'){
+    if(name.front() == CALL_PREFIX && name.back() == CALL_SUFFIX){
         execute_function(name.substr(1, name.size() - 2));
     }
 }
@@ -394,7 +318,7 @@ void execute_branch(string& line){
         expression += splitted[i];
     }
     int toJump = eval(expression);
-    //cout<<registers[PC]<< " IS PC. jumping on "<<toJump<<endl;
+    
     int LHS = is_number(splitted[1]) ? stoi(splitted[1]) : registers[splitted[1]];
     int RHS = is_number(splitted[2]) ? stoi(splitted[2]) : registers[splitted[2]];
     bool branch_should_jump = false;
@@ -406,8 +330,17 @@ void execute_branch(string& line){
     else if(brc == BEQ && LHS == RHS) branch_should_jump = true;
     else if(brc == BNE && LHS != RHS) branch_should_jump = true;
     if(branch_should_jump){
+            if(DEBUG) cout<<"\tExecuting branch jump...."<<endl;
+            if(DEBUG) cout<<"\tJumping on line "<<toJump/4<<endl;
             registers[PC] = toJump - INSTRUCTION_SIZE;
     }
+}
+
+void jump(string& line){
+    string expr = remove_spaces(line.substr(JUMP_STR.size()));
+    int toJump = eval(expr);
+    registers[PC] = toJump - INSTRUCTION_SIZE;
+    if(DEBUG) cout<<"\tJumping on line "<<registers[PC]/4<<endl;
 }
 
 void store(string& line){
@@ -423,12 +356,14 @@ void store(string& line){
         *(int*)&M[memo_ind] = to_assign;
     }
     else if(split[0] == to_char){
-        M[memo_ind] = (char) get_value(split[1]);
+        to_assign = (char) get_value(split[1]);
+        M[memo_ind] = to_assign;
     }else if(split[0] == to_short){
-        *(short*)&M[memo_ind] = (short) get_value(split[1]);
+        to_assign = (short) get_value(split[1]);
+        *(short*)&M[memo_ind] = to_assign;
     }
     
-    //cout<<"Memory at index "<<memo_ind<<" and is equal to "<< (int)M[memo_ind]<<endl;
+    if(DEBUG) cout<<"\tMemory at index "<<memo_ind<<" and is equal to "<<to_assign<<endl;
 }
 
 void load(string& line){
@@ -445,7 +380,7 @@ void load(string& line){
     if(cast == to_char) registers[LHS] = M[memo_index];
     else if(cast == to_short) registers[LHS] = *(short*)&M[memo_index];
     else registers[LHS] = *(int*)&M[memo_index];
-    //cout<<"register "<<LHS<<" is now equal to "<<registers[LHS]<<" wow."<<endl;
+    if(DEBUG) cout<<"\tregister "<<LHS<<" is now equal to "<<registers[LHS]<<" wow."<<endl;
 }
 
 void perform_alu(string& line){
@@ -463,26 +398,18 @@ void perform_alu(string& line){
         RHS = remove_spaces(RHS);
         registers[LHS] = eval(RHS);
     }
-   // cout<<"register "<<LHS<<" now became "<<registers[LHS]<<endl;
+    if(DEBUG) cout<<"\tregister "<<LHS<<" now became "<<registers[LHS]<<endl;
 }
 
-/**
- * @brief 
- * Evaluates an expression. 
- * Expression must be either a constant, a valid register,
- * or an operation between registers/numbers/register and a number.
- * @param expr string to be evaluated
- * @return int value of the expression
- */
 int eval(string expr){
     if(is_number(expr)) return stoi(expr);
     if(registers.find(expr) != registers.end()) return registers[expr];
     char oper = ' ';
     int index = -1;
     for(char op : ops){
-        if(indexOf(expr, op) != -1){
+        if(expr.find(op) != string::npos){
             oper = op;
-            index = indexOf(expr,op);
+            index = expr.find(op);
         }
     }
     if(index == -1) ERROR_INVALID_LINE
@@ -500,5 +427,7 @@ int eval(string expr){
     if(oper == '-') return LHS - RHS;
     else if(oper == '+') return LHS + RHS;
     else if(oper == '*') return LHS * RHS;
-    return LHS / RHS;
+    else if(oper == '/') return LHS / RHS;
+    else if(oper == '%') return LHS % RHS;
+    return 0;
 }

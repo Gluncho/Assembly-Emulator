@@ -1,0 +1,5 @@
+main: 
+SP = SP - 2
+M[SP] = 1000000
+SP = SP + 2
+RET

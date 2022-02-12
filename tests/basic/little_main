@@ -1,0 +1,7 @@
+main:
+SP = SP - 8
+M[SP] = 4
+M[SP + 4] = 256
+RV = .1 M[SP + 4]
+SP = SP + 8
+RET

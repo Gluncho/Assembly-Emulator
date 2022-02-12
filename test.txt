@@ -1,12 +1,13 @@
 main:
-SP = SP - 16
+JMP PC + 8
 CALL <holyfk>
 M[PC +2]  = .1 256
 R2 = M[SP+4]
 R3 = R2 + 4
 RET
 holyfk:
-BEQ 2 2 PC - 20
+CALL <h>
 RET
 h:
+xdd
 RET

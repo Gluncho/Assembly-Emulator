@@ -1,9 +1,13 @@
 #ifndef __keywords__
 #define __keywords__
 
+
 using namespace std;
 
-#define HELP "-h"
+//flags
+#define DEBUG_FLAG "-dbg"
+#define HELP "-help"
+#define EXIT "-exit"
 
 #define MEMORY_SIZE 10000
 #define INSTRUCTION_SIZE 4
@@ -13,8 +17,12 @@ using namespace std;
 
 #define OPEN_BRACKET '['
 #define CLOSED_BRACKET ']'
-char ops[] = {'-', '+', '*', '/'};
+#define CALL_PREFIX '<'
+#define CALL_SUFFIX '>'
+
+char ops[] = {'-', '+', '*', '/', '%'};
 const string CALL_STR = "CALL";
+const string JUMP_STR = "JMP";
 const string STACK_NAME_STR = "M";
 const string REGISTER_NAME_STR = "R";
 

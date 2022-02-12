@@ -1,0 +1,21 @@
+gcd:
+R1 = M[SP+8]
+BNE R1 0 PC+12
+RV = M[SP+4]
+RET
+R1 = M[SP+4]
+R2 = M[SP+8]
+R3 = R1 % R2
+SP = SP - 8
+M[SP+4] = R3
+M[SP]=R2
+CALL <gcd>
+SP = SP + 8
+RET
+main:
+SP = SP - 8
+M[SP] = 178
+M[SP + 4]= 200
+CALL <gcd>
+SP = SP + 8
+RET
