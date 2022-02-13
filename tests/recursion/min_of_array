@@ -1,0 +1,53 @@
+minarr:
+R1 = M[SP + 8]
+BNE R1 1 PC+16
+R1 = M[SP+4]
+RV = M[R1]
+RET
+SP = SP - 8
+R1 = M[SP + 12]
+M[SP] = R1
+R2 = M[SP + 16]
+R3 = R2 - 1
+M[SP + 4] = R3
+CALL <minarr>
+SP = SP + 8
+R1 = M[SP + 4]
+R2 = M[SP + 8]
+R3 = R2 - 1
+R3 = R3 * 4
+R4 = R1 + R3
+R5 = M[R4]
+SP = SP - 8
+M[SP] = R5
+M[SP + 4] = RV
+CALL <min>
+SP = SP + 8
+RET
+min:
+R1 = M[SP+4]
+R2 = M[SP + 8]
+BLE R1 R2 PC+12
+RV = R2
+RET
+RV = R1
+RET
+main:
+R1 = 4 * 5
+R1 = .1 R1
+SP = SP - R1
+M[SP] = 99
+M[SP+4]= 101
+M[SP + 8] = .2 98
+M[SP + 12] = .1 97
+M[SP + 16] = 100
+SP = SP - 8
+R1 = SP+8
+M[SP] = R1
+M[SP + 4] = 5
+CALL <minarr>
+SP = SP + 8
+R1 = 4*5
+SP = SP + R1
+RV = RV
+RET 

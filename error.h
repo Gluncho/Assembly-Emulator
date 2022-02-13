@@ -6,21 +6,21 @@
 
 #define NO_OPERATOR_FOUND -1
 
-#define ERROR_PREFIX "ERROR : LINE "<<line_num<<". "
+#define ERROR_PREFIX "\tERROR : LINE "<<line_num<<". "
 #define ERROR_NO_FILE_FOUND \
-        {cout<<"ERROR: Invalid filename. Please enter a valid one next time."<<endl; \
+        {cout<<"\tERROR: Invalid filename. Please enter a valid one next time."<<endl; \
         exit(0); \
         }
 
 #define ERROR_REDECLARATION_OF_FUNCTION(name) \
-        {cout<<"ERROR: Function named \""<<name \
+        {cout<<"\tERROR: Function named \""<<name \
         <<"\" is declared more than once"<<endl; \
         exit(0);\
         }
 
 #define ERROR_FUNC_NOT_FOUND(name) \
         {cout<< \
-        "ERROR: Couldn't find the function named "<<name<<endl; \
+        "\tERROR: Couldn't find the function named "<<name<<endl; \
         exit(0); \
         }
 

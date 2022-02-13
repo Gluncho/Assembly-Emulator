@@ -13,7 +13,7 @@ map<string,int> registers;
 set<string> built_in_functions;
 
 //debugging mode
-bool DEBUG = false;
+static bool DEBUG = false;
 
 int main(int argc, char* argv[]){
     interact_with_user();
@@ -21,10 +21,10 @@ int main(int argc, char* argv[]){
 }
 
 void interact_with_user(){
-    cout<<"---------------------------------------------------------------------------------"<<endl;
+    cout<<"----------------------------------------------------------------------------------------------------------------------"<<endl;
     cout<<"\tEnter a path of a file which you want to be executed, type \"-help\" for more information."<<endl;
     while(true){
-        cout<<"\tEnter: ";
+        cout<<"\n\tEnter the command: ";
         string input;
         getline(cin,input);
         input = trim(input);
@@ -33,8 +33,7 @@ void interact_with_user(){
             help();
         }else if(starts_with(input, DEBUG_FLAG)){
             DEBUG = 1;
-            vector<string> sp = multisplit(input);
-            process_file(sp[1]);
+            process_file(multisplit(input)[1]);
         }else{
             process_file(input);
         }
@@ -48,14 +47,16 @@ void interact_with_user(){
 }
 
 void help(){
-    cout<<"\t---------------------------------------------------------------------------------"<<endl;
-    cout<<"\t------------------------------------HELP----------------------------------------"<<endl;
-    cout<<"\tThis is an Assembly Emulator. "<<endl;
-    cout<<"\tYou can use it to execute your own assembly code (Note: Should be a valid code that RISC processor uses."<<endl;
-    cout<<"\tIf you don't know the language, see \"Assembly Language Used.txt\" to get a grasp on it."<<endl;
-    cout<<"\tOtherwise, you can either run your own tests, or tests provided in \"tests\" folder"<<endl<<endl;
-    cout<<"\tYou can run file with the debugging flag, which means that for each executed line,\n\tyou're gonna see what really changed in the stack, or registers."<<endl;
-    cout<<"\tTo do that, you can use -dbg flag before entering a filename."<<endl;
+    
+    cout<<"\t----------------------------------------------------------------------------------------------------------------------------"<<endl;
+    cout<<"\t----------------------------------------------------------HELP--------------------------------------------------------------"<<endl;
+    cout<<"\t\tThis is an Assembly Emulator. "<<endl;
+    cout<<"\t\tYou can use it to execute your own assembly code (Note: Should be a valid code that RISC processor uses."<<endl;
+    cout<<"\t\tIf you don't know the language, see \"Assembly Language Used.txt\" to get a grasp on it."<<endl;
+    cout<<"\t\tOtherwise, you can either run your own tests, or tests provided in \"tests\" folder"<<endl<<endl;
+    cout<<"\t\tYou can run file with the debugging flag, which means that for each executed line,\n\tyou're gonna see what really changed in the stack, or registers."<<endl;
+    cout<<"\t\tTo do that, you can use -dbg flag before entering a filename."<<endl;
+    cout<<"\t----------------------------------------------------------------------------------------------------------------------------"<<endl;
 
 }
 
@@ -81,12 +82,12 @@ void execute_file(){
     registers[SP] = MEMORY_SIZE;
     if(functions.find(MAIN) != functions.end()) registers[PC] = functions[MAIN] + INSTRUCTION_SIZE;
 
-    cout<<"----------------- STARTING EXECUTION -----------------"<<endl;
+    cout<<"\t\t------------------------------- STARTING EXECUTION -------------------------------"<<endl;
     clock_t begin = clock();
     execute_function(MAIN);
     clock_t end = clock();
     double elapsed_secs = double(end - begin);
-    cout<<"----------------- EXECUTION COMPLETED SUCCESSFULLY.-----------------"<<endl;
+    cout<<"\t\t------------------------ EXECUTION COMPLETED SUCCESSFULLY ------------------------"<<endl;
     cout<<"\tElapsed time(ms) : "<<end-begin<<endl;
 }
 
@@ -131,7 +132,7 @@ void process_line(){
     if(type == CALL){
         call_function(line);
     }else if(type == BRANCH){
-        execute_branch(line);
+        branch(line);
     }else if(type == STORE){
         store(line);
     }else if(type == LOAD){
@@ -170,10 +171,13 @@ line_type get_line_type(string& line){
         delete[] splitted;
         return STORE;
     }else if(is_valid_load(lhs,rhs)){
+        delete[] splitted;
         return LOAD;
     }else if(is_valid_alu(lhs,rhs)){
+        delete[] splitted;
         return ALU;
     }
+    delete[] splitted;
     return INVALID;
 }
 
@@ -202,18 +206,21 @@ bool is_number(string text){
 
 bool is_register(string& str){
     if(str == RV || str == SP || str == PC) return true;
-    if(str.length() < REGISTER_NAME_STR.size()) return false;
-    if(str.substr(0, REGISTER_NAME_STR.size()) == REGISTER_NAME_STR 
-        && is_number(str.substr(REGISTER_NAME_STR.size()))) return true;
-    return false;
+    return starts_with(str, REGISTER_NAME_STR) && is_number(str.substr(REGISTER_NAME_STR.size()));
 }
 
 bool is_number_or_register(string& str){
     return is_number(str) || is_register(str);
 }
 
+bool is_casting_number(string& rhs){
+    vector<string> tokenized = multisplit(rhs);
+    return tokenized.size() == 2 && is_cast(tokenized[0]) && is_number_or_register(tokenized[1]);
+}
+
 bool is_valid_expression(string& expr, bool is_alu = false){
-    if(is_number_or_register(expr)) return true;
+    if(is_number_or_register(expr) && !is_alu) return true; 
+
     // otherwise, it must be an operation between a constant and a register
     string concatenated = remove_spaces(expr);
     int oper_index = NO_OPERATOR_FOUND;
@@ -227,6 +234,8 @@ bool is_valid_expression(string& expr, bool is_alu = false){
     if(oper_index == NO_OPERATOR_FOUND) return false;
     string LHS = concatenated.substr(0,oper_index);
     string RHS = concatenated.substr(oper_index + 1);
+
+    // ALU can be an operation of register and a register, but memory address can't.
     if(!is_alu && is_register(LHS) && is_register(RHS)) return false;
     return is_number_or_register(LHS) && is_number_or_register(RHS);
 }
@@ -247,7 +256,7 @@ bool is_valid_call(string& line){
 bool is_valid_branch(string& line){
     if(line.size() < BGE.size()) return false;
     vector<string> splitted = multisplit(line);
-    if(splitted.size() < 4 || splitted.size() > 6) return false;
+    if(splitted.size() < MIN_BRANCH_TOKENS || splitted.size() > MAX_BRANCH_TOKENS) return false;
     string brc = splitted[0];
     if(!(brc == BGE || brc == BGT || brc == BLE || brc == BLT || brc == BNE || brc ==BEQ )) return false;
     if(!is_number_or_register(splitted[1]) || !is_number_or_register(splitted[2])) return false;
@@ -255,10 +264,10 @@ bool is_valid_branch(string& line){
 }
 
 bool is_valid_store(string& lhs, string& rhs){
-    if(lhs.size() < STACK_NAME_STR.size() || lhs.substr(0,STACK_NAME_STR.size()) != STACK_NAME_STR) return false;
+    if(!starts_with(lhs, STACK_NAME_STR)) return false;
     string memo_index = lhs.substr(STACK_NAME_STR.size());
     if(memo_index.front() != OPEN_BRACKET || memo_index.back() != CLOSED_BRACKET) return false;
-    string actual_index = memo_index.substr(1,memo_index.length() - 2);
+    string actual_index = memo_index.substr(1,memo_index.length() - 2); // cut parenthesis
     vector<string> split = multisplit(rhs);
     bool is_valid = is_valid_expression(actual_index);
     is_valid = is_valid && ((split.size() == 1 && is_number_or_register(split[0])) ||
@@ -268,18 +277,7 @@ bool is_valid_store(string& lhs, string& rhs){
 
 bool is_valid_load(string& lhs, string& rhs){
     if(is_register(lhs) == false) return false; // LHS should be a register
-    string expr = rhs;
-    string cast = expr.length() >= CAST_SIZE ? expr.substr(0, CAST_SIZE) : "";
-    if(cast != "" && is_cast(cast)){
-        string expr_without_cast = expr.substr(CAST_SIZE);
-        expr = remove_spaces(expr_without_cast); //trim casting so we can check the rest of the expression
-    }
-    //expression must be something like M[....]
-    if(expr.size() < (STACK_NAME_STR.size() + 2) || expr.substr(0, STACK_NAME_STR.size()) != STACK_NAME_STR) return false;
-    if(expr[STACK_NAME_STR.size()] != OPEN_BRACKET || expr.back() != CLOSED_BRACKET) return false;
-    //there must be an expression between brackets
-    expr = expr.substr(STACK_NAME_STR.size() + 1, expr.size() - STACK_NAME_STR.size() - 2);
-    return is_valid_expression(expr);
+    return is_number_or_register(rhs) || is_casting_number(rhs) || is_loading_from_memory(rhs);
 }
 
 bool is_valid_alu(string& lhs, string& rhs){
@@ -311,7 +309,7 @@ void call_function(string& line){
     }
 }
 
-void execute_branch(string& line){
+void branch(string& line){
     vector<string> splitted = multisplit(line);
     string expression = "";
     for(int i = 3; i < splitted.size(); i++){
@@ -331,7 +329,7 @@ void execute_branch(string& line){
     else if(brc == BNE && LHS != RHS) branch_should_jump = true;
     if(branch_should_jump){
             if(DEBUG) cout<<"\tExecuting branch jump...."<<endl;
-            if(DEBUG) cout<<"\tJumping on line "<<toJump/4<<endl;
+            if(DEBUG) cout<<"\tJumping on line "<<toJump/4 + 1<<endl;
             registers[PC] = toJump - INSTRUCTION_SIZE;
     }
 }
@@ -369,35 +367,27 @@ void store(string& line){
 void load(string& line){
     string LHS = trim(multisplit(line,'=')[0]);
     string RHS = trim(multisplit(line, '=')[1]);
-    string cast = RHS.length() >= CAST_SIZE ? RHS.substr(0, CAST_SIZE) : "";
-    int memo_index;
-    string memo = RHS;
-    if(cast != "" && is_cast(cast)){
-        memo = RHS.substr(CAST_SIZE);
+    if(!is_loading_from_memory(RHS)) load_number(LHS,RHS);
+    else{
+        string cast = RHS.length() >= CAST_SIZE ? RHS.substr(0, CAST_SIZE) : "";
+        int memo_index;
+        string memo = RHS;
+        if(cast != "" && is_cast(cast)){
+            memo = RHS.substr(CAST_SIZE);
+        }
+        memo = remove_spaces(memo);
+        memo_index = eval(memo.substr(STACK_NAME_STR.size() + 1, memo.size() - STACK_NAME_STR.size() - 2));
+        if(cast == to_char) registers[LHS] = M[memo_index];
+        else if(cast == to_short) registers[LHS] = *(short*)&M[memo_index];
+        else registers[LHS] = *(int*)&M[memo_index];
     }
-    memo = remove_spaces(memo);
-    memo_index = eval(memo.substr(STACK_NAME_STR.size() + 1, memo.size() - STACK_NAME_STR.size() - 2));
-    if(cast == to_char) registers[LHS] = M[memo_index];
-    else if(cast == to_short) registers[LHS] = *(short*)&M[memo_index];
-    else registers[LHS] = *(int*)&M[memo_index];
     if(DEBUG) cout<<"\tregister "<<LHS<<" is now equal to "<<registers[LHS]<<" wow."<<endl;
 }
 
 void perform_alu(string& line){
     string LHS = trim(multisplit(line,'=')[0]);
-    string RHS = trim(multisplit(line, '=')[1]);
-    string cast = RHS.length() >= CAST_SIZE ? RHS.substr(0, CAST_SIZE) : "";
-    if(is_cast(cast)){
-        int reg_value = registers[trim(RHS.substr(CAST_SIZE))];
-        if(cast == to_char){
-            registers[LHS] = *(char*)&reg_value;
-        }else if(cast == to_short){
-            registers[LHS] = *(short*)&reg_value;
-        }
-    }else{
-        RHS = remove_spaces(RHS);
-        registers[LHS] = eval(RHS);
-    }
+    string RHS = remove_spaces(multisplit(line, '=')[1]);
+    registers[LHS] = eval(RHS);
     if(DEBUG) cout<<"\tregister "<<LHS<<" now became "<<registers[LHS]<<endl;
 }
 
@@ -430,4 +420,30 @@ int eval(string expr){
     else if(oper == '/') return LHS / RHS;
     else if(oper == '%') return LHS % RHS;
     return 0;
+}
+
+bool is_loading_from_memory(string& rhs){
+    string expr = rhs;
+    string cast = expr.length() >= CAST_SIZE ? expr.substr(0, CAST_SIZE) : "";
+    if(cast != "" && is_cast(cast)){
+        string expr_without_cast = expr.substr(CAST_SIZE);
+        expr = remove_spaces(expr_without_cast); //trim casting so we can check the rest of the expression
+    }
+    //expression must be something like M[....]
+    if(!starts_with(expr, STACK_NAME_STR)) return false;
+    if(expr[STACK_NAME_STR.size()] != OPEN_BRACKET || expr.back() != CLOSED_BRACKET) return false;
+    //there must be an expression between brackets
+    expr = expr.substr(STACK_NAME_STR.size() + 1, expr.size() - STACK_NAME_STR.size() - 2);
+    return is_valid_expression(expr);
+}
+
+void load_number(string& lhs, string& rhs){
+    if(is_number_or_register(rhs)) registers[lhs] = get_value(rhs);
+    else{
+        string cast = rhs.substr(0, CAST_SIZE);
+        string rest = trim(rhs.substr(CAST_SIZE));
+        int value = get_value(rest);
+        if(cast == to_char) registers[lhs] = (char) value;
+        else if(cast == to_short) registers[lhs] = (short) value;
+    }
 }

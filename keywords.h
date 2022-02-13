@@ -21,15 +21,19 @@ using namespace std;
 #define CALL_SUFFIX '>'
 
 char ops[] = {'-', '+', '*', '/', '%'};
+
 const string CALL_STR = "CALL";
 const string JUMP_STR = "JMP";
 const string STACK_NAME_STR = "M";
 const string REGISTER_NAME_STR = "R";
 
+//CASTS
 const string to_char = ".1";
 const string to_short = ".2";
 
 // BRANCHES
+#define MIN_BRANCH_TOKENS 4
+#define MAX_BRANCH_TOKENS 6
 const string BGE = "BGE";
 const string BGT = "BGT";
 const string BLE = "BLE";
