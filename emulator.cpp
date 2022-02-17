@@ -10,12 +10,20 @@ char M[MEMORY_SIZE];
 // registers
 map<string,int> registers;
 // built-in functions
-set<string> built_in_functions;
+set<string> built_in_functions = {"printf", "strlen"};
 
 //debugging mode
 static bool DEBUG = false;
 
+void init(){
+    registers.clear();
+    functions.clear();
+    lines.clear();
+    DEBUG = 0;
+    memset(M, 0, sizeof(M));
+}
 int main(int argc, char* argv[]){
+    init();
     interact_with_user();
     return 0;
 }
@@ -24,6 +32,7 @@ void interact_with_user(){
     cout<<"----------------------------------------------------------------------------------------------------------------------"<<endl;
     cout<<"\tEnter a path of a file which you want to be executed, type \"-help\" for more information."<<endl;
     while(true){
+        init();
         cout<<"\n\tEnter the command: ";
         string input;
         getline(cin,input);
@@ -37,11 +46,6 @@ void interact_with_user(){
         }else{
             process_file(input);
         }
-        registers.clear();
-        functions.clear();
-        lines.clear();
-        DEBUG = 0;
-        memset(M, 0, sizeof(M));
     }
    
 }
@@ -54,7 +58,7 @@ void help(){
     cout<<"\t\tYou can use it to execute your own assembly code (Note: Should be a valid code that RISC processor uses."<<endl;
     cout<<"\t\tIf you don't know the language, see \"Assembly Language Used.txt\" to get a grasp on it."<<endl;
     cout<<"\t\tOtherwise, you can either run your own tests, or tests provided in \"tests\" folder"<<endl<<endl;
-    cout<<"\t\tYou can run file with the debugging flag, which means that for each executed line,\n\tyou're gonna see what really changed in the stack, or registers."<<endl;
+    cout<<"\t\tYou can run file with the debugging flag, which means that for each executed line,\n\tyou're gonna see what has really changed in the stack, or registers."<<endl;
     cout<<"\t\tTo do that, you can use -dbg flag before entering a filename."<<endl;
     cout<<"\t----------------------------------------------------------------------------------------------------------------------------"<<endl;
 
@@ -103,6 +107,10 @@ void read_functions(){
 }
 
 void execute_function(string func_name){
+    if(built_in_functions.count(func_name)) {
+        execute_prebuilt_function(func_name);
+        return;
+    }
     if(functions.count(func_name) == 0) ERROR_FUNC_NOT_FOUND(func_name)
     int current_line_num = functions[func_name] / INSTRUCTION_SIZE;
     registers[SP] -= sizeof(int); CHECK_SP
@@ -113,11 +121,16 @@ void execute_function(string func_name){
     }
     registers[PC] = *(int*)&M[registers[SP]];
     if(DEBUG) {
-        cout<<"\tExiting function "<<func_name;
-        if(func_name != MAIN) cout<<" (returning to saved pc: "<<registers[PC]<<").";
+        cout<<"\tEXITING FUNCTION "<<func_name;
+        if(func_name != MAIN) cout<<" (RETURNING TO SAVED PC, WHICH TURNS OUT TO BE LINE "<<line_num<<").";
         cout<<endl;
     }
     registers[SP] += sizeof(int); 
+}
+
+void execute_prebuilt_function(string func_name){
+    if(func_name == PRINTF) call_printf();
+    else if(func_name == STRLEN) call_strlen();
 }
 
 void process_line(){
@@ -126,7 +139,7 @@ void process_line(){
     line_type type = get_line_type(line);
     if(type == INVALID) ERROR_INVALID_LINE
     if(DEBUG) {
-        cout<<"\tExecuting Line Number "<<line_num<<". ---------------- Line : \""<<line<<"\""<<endl;
+        cout<<"\tEXECUTING LINE NUMBER "<<line_num<<". ---------------- Line : \""<<line<<"\""<<endl;
         displayLineType(type);
     }
     if(type == CALL){
@@ -198,8 +211,11 @@ bool is_cast(string& cast){
 }
 
 bool is_number(string text){
+    if(text.front() == '-' && text.size() > 1){
+        return text[1]>='0' && text[1]<='9' && is_number(text.substr(1));
+    }
     for(int i = 0; i < text.size(); i++){
-        if((text[i] < '0') || (text[i] > '9')) return false;
+        if(text[i]<'0' || text[i] > '9') return false;
     }
     return true;
 }
@@ -241,16 +257,16 @@ bool is_valid_expression(string& expr, bool is_alu = false){
 }
 
 bool is_valid_call(string& line){
-    if(line.size() < CALL_STR.size()) return false;
-    if(line.substr(0, CALL_STR.size()) != CALL_STR) return false;
+    if(!starts_with(line, CALL_STR)) return false;
     string func = trim(line.substr(CALL_STR.size() + 1));
     if(func == "") ERROR_INVALID_CALL
     if(func.front() == '<' && func.back() == '>'){
-        if(functions.count(func.substr(1,func.size()-2)) == 0) ERROR_INVALID_CALL
+        string name = func.substr(1, func.size() - 2);
+        if(functions.count(name) == 0 && built_in_functions.count(name) == 0) ERROR_INVALID_CALL
         else return true;
     }
     if(!is_number_or_register(func)) ERROR_INVALID_CALL
-    return false;
+    return true;
 }
 
 bool is_valid_branch(string& line){
@@ -306,9 +322,44 @@ void call_function(string& line){
     string name = trim(line.substr(CALL_STR.size() + 1));
     if(name.front() == CALL_PREFIX && name.back() == CALL_SUFFIX){
         execute_function(name.substr(1, name.size() - 2));
+    }else{
+        int newPC = get_value(name);
+        name = lines[newPC / 4];
+        string func_name;
+        if(!is_function_declaration(name, func_name)) ERROR_INVALID_CALL
+        execute_function(func_name);
     }
 }
 
+void call_printf(){
+    cout<<"\t\t-------------------------------------- EXECUTING PRINTF... ----------------------------------------------------"<<endl;
+    cout<<"\t\t";
+    int cur = registers[SP];
+    string arg = "";
+    while(M[cur] != '\0') arg += M[cur++];
+    int end = cur + 1;
+    string parsed = "";
+    for(int i = 0; i < arg.size(); i++){
+        if(arg[i] != '%') parsed +=arg[i];
+        else if(i<arg.size()-1 && arg[i+1] == 'd'){
+            parsed += to_string(*(int*)&M[end]);
+            end += 4;
+            i++;
+        }else if(i < arg.size() - 1 && arg[i+1] == 'c'){
+            parsed += M[end];
+            end++;
+        }
+    }
+    cout<<parsed<<endl;
+    cout<<"\t\t ----------------------------- PRINTF EXECUTION ENDED SUCCESSFULLY---------------------------------------------"<<endl;
+
+}
+void call_strlen(){
+    int str_ind = *(int*)&M[registers[SP]];
+    int len = 0;
+    while(M[str_ind++] != '\0') len++;
+    registers[RV] = len;
+}
 void branch(string& line){
     vector<string> splitted = multisplit(line);
     string expression = "";
@@ -381,14 +432,14 @@ void load(string& line){
         else if(cast == to_short) registers[LHS] = *(short*)&M[memo_index];
         else registers[LHS] = *(int*)&M[memo_index];
     }
-    if(DEBUG) cout<<"\tregister "<<LHS<<" is now equal to "<<registers[LHS]<<" wow."<<endl;
+    if(DEBUG) cout<<"\tREGISTER "<<LHS<<" NOW HAS A VALUE EQUAL TO "<<registers[LHS]<<endl;
 }
 
 void perform_alu(string& line){
     string LHS = trim(multisplit(line,'=')[0]);
     string RHS = remove_spaces(multisplit(line, '=')[1]);
     registers[LHS] = eval(RHS);
-    if(DEBUG) cout<<"\tregister "<<LHS<<" now became "<<registers[LHS]<<endl;
+    if(DEBUG) cout<<"\tREGISTER "<<LHS<<" NOW HAS A VALUE EQUAL TO "<<registers[LHS]<<endl;
 }
 
 int eval(string expr){
@@ -419,6 +470,8 @@ int eval(string expr){
     else if(oper == '*') return LHS * RHS;
     else if(oper == '/') return LHS / RHS;
     else if(oper == '%') return LHS % RHS;
+    else if(oper == '&') return LHS & RHS;
+    else if(oper == '|') return LHS | RHS;
     return 0;
 }
 

@@ -1,8 +1,16 @@
 main:
-M[ 2+ PC ] = .1 255
-R1 = 257
-R2 = .1 R1
-R3 = .1 R2
+SP = SP - 10
+M[SP] = .1 4
+M[SP + 1] = .1 2
+M[SP + 2] = .1 4
+M[SP + 3] = .1 0
+M[SP + 4] = .1 0
+SP = SP - 4
+R1 = SP + 4
+M[SP] = R1
+CALL <strlen>
+SP = SP + 4
+RV = RV
 RET
 holyfk:
 CALL <h>

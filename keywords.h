@@ -9,18 +9,25 @@ using namespace std;
 #define HELP "-help"
 #define EXIT "-exit"
 
-#define MEMORY_SIZE 10000
+//IMPORTANT INTEGERS
+#define MEMORY_SIZE 20000
 #define INSTRUCTION_SIZE 4
 #define CAST_SIZE 2
+
+
 #define MAIN "main"
 #define RET "RET"
+#define PRINTF "printf"
+#define STRLEN "strlen"
 
+//SPECIAL PREFIX/SUFFIX CHARACTERS
 #define OPEN_BRACKET '['
 #define CLOSED_BRACKET ']'
 #define CALL_PREFIX '<'
 #define CALL_SUFFIX '>'
 
-char ops[] = {'-', '+', '*', '/', '%'};
+// SUPPORTED OPERATORS
+char ops[] = {'-', '+', '*', '/', '%', '&', '|'};
 
 const string CALL_STR = "CALL";
 const string JUMP_STR = "JMP";
@@ -31,6 +38,7 @@ const string REGISTER_NAME_STR = "R";
 const string to_char = ".1";
 const string to_short = ".2";
 
+const string regex_int = "%d";
 // BRANCHES
 #define MIN_BRANCH_TOKENS 4
 #define MAX_BRANCH_TOKENS 6

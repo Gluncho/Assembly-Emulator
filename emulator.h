@@ -32,6 +32,9 @@ void perform_alu(string& line);
 void jump(string& line);
 void call_function(string& line);
 void execute_function(string func_name);
+void execute_prebuilt_function(string func_name);
+void call_printf();
+void call_strlen();
 
 /**
  * @brief 
@@ -106,4 +109,5 @@ bool is_valid_jump(string& line);
  */
 bool is_valid_expression(string& expr, bool is_alu);
 
+bool is_number(string text);
 #endif
