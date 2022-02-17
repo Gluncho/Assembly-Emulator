@@ -23,6 +23,12 @@ void init(){
     memset(M, 0, sizeof(M));
 }
 int main(int argc, char* argv[]){
+    // cout<<(int)(char)(-256)<<endl;
+    // while(true){
+    //     int x;
+    //     cin>>x;
+    //     cout<<bitset<(32)>(x) <<endl;
+    // }
     init();
     interact_with_user();
     return 0;
@@ -113,19 +119,22 @@ void execute_function(string func_name){
     }
     if(functions.count(func_name) == 0) ERROR_FUNC_NOT_FOUND(func_name)
     int current_line_num = functions[func_name] / INSTRUCTION_SIZE;
-    registers[SP] -= sizeof(int); CHECK_SP
-    memcpy(&M[registers[SP]], &registers[PC], sizeof(int)); // SAVED PC
+    if(func_name != MAIN){
+        registers[SP] -= sizeof(int); CHECK_SP
+        memcpy(&M[registers[SP]], &registers[PC], sizeof(int)); // SAVED PC
+    }
     registers[PC] = current_line_num * INSTRUCTION_SIZE;
     while(lines[line_num] != RET){
         process_line();
     }
-    registers[PC] = *(int*)&M[registers[SP]];
+
+    if(func_name != MAIN) registers[PC] = *(int*)&M[registers[SP]], registers[SP]+= sizeof(int); //update SP, PC
+
     if(DEBUG) {
         cout<<"\tEXITING FUNCTION "<<func_name;
         if(func_name != MAIN) cout<<" (RETURNING TO SAVED PC, WHICH TURNS OUT TO BE LINE "<<line_num<<").";
         cout<<endl;
-    }
-    registers[SP] += sizeof(int); 
+    } 
 }
 
 void execute_prebuilt_function(string func_name){
@@ -389,7 +398,7 @@ void jump(string& line){
     string expr = remove_spaces(line.substr(JUMP_STR.size()));
     int toJump = eval(expr);
     registers[PC] = toJump - INSTRUCTION_SIZE;
-    if(DEBUG) cout<<"\tJumping on line "<<registers[PC]/4<<endl;
+    if(DEBUG) cout<<"\tJumping on line "<<line_num + 1<<endl;
 }
 
 void store(string& line){

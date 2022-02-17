@@ -2,7 +2,7 @@ gcd:
 R1 = M[SP+8]
 BNE R1 0 PC+12
 RV = M[SP+4]
-RET
+JMP PC + 36
 R1 = M[SP+4]
 R2 = M[SP+8]
 R3 = R1 % R2

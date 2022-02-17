@@ -11,6 +11,10 @@ M[SP] = R1
 CALL <strlen>
 SP = SP + 4
 RV = RV
+R1 = SP - 8
+M[R1 + 4] =.1 65
+R2 =.1 M[R1 + 4]
+M[R1] = R2
 RET
 holyfk:
 CALL <h>
