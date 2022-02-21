@@ -17,8 +17,11 @@ using namespace std;
 
 #define MAIN "main"
 #define RET "RET"
+
+//BUILT-IN FUNCTIONS
 #define PRINTF "printf"
 #define STRLEN "strlen"
+#define PRINTSTR "printStr"
 
 //SPECIAL PREFIX/SUFFIX CHARACTERS
 #define OPEN_BRACKET '['
@@ -39,9 +42,10 @@ const string to_char = ".1";
 const string to_short = ".2";
 
 const string regex_int = "%d";
+
 // BRANCHES
-#define MIN_BRANCH_TOKENS 4
-#define MAX_BRANCH_TOKENS 6
+#define MIN_BRANCH_TOKENS 4 // for example, BGE R1 R2 200
+#define MAX_BRANCH_TOKENS 6 // for example, BGE R1 R2 PC + 200
 const string BGE = "BGE";
 const string BGT = "BGT";
 const string BLE = "BLE";

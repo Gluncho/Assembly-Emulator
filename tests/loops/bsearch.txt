@@ -1,0 +1,67 @@
+bsearch:
+SP = SP - 12
+M[SP + 8] = 0
+R1 = M[SP + 20]
+R2 = R1 - 1
+M[SP + 4] = R2
+R1 = M[SP + 8]
+R2 = M[SP + 4]
+BGT R1 R2 PC+124
+R1 = M[SP + 8]
+R2 = M[SP + 4]
+R3 = R1 + R2
+R4 = R3 / 2
+M[SP] = R4
+R1 = M[SP + 16]
+R2 = M[SP]
+R2 = R2 * 4
+R3 = R1 + R2
+R4 = M[R3]
+R5 = M[SP + 24]
+BNE R4 R5 PC+16
+RV = M[SP]
+SP = SP + 12
+RET
+R1 = M[SP]
+R2 = R1 * 4
+R3 = M[SP + 16]
+R3 = R3 + R2
+R4 = M[R3]
+R5 = M[SP + 24]
+BGE R4 R5 PC+20
+R1 = M[SP]
+R1 = R1 + 1
+M[SP+8] = R1
+JMP PC+16
+R1 = M[SP]
+R1 = R1 - 1
+M[SP + 4] = R1
+JMP PC - 128
+RV = -1
+SP = SP + 12
+RET
+main:
+R1 = 4*7
+SP = SP - R1
+M[SP+4] = 10
+M[SP + 8] = 20
+M[SP + 12] = 30
+M[SP + 16] = 40
+M[SP + 20] = 50
+M[SP + 24] = 60
+SP = SP - 12
+R1 = SP + 16
+M[SP] = R1
+M[SP + 4] = 6
+M[SP + 8] = 30
+CALL <bsearch>
+SP = SP + 12
+M[SP] = RV
+SP = SP - 4
+R1 = M[SP + 4]
+M[SP] = R1
+CALL <printf>
+SP = SP + 4
+R1 = 4*7
+SP = SP + R1
+RET

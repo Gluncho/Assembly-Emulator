@@ -1,5 +1,5 @@
 main:
-SP = SP - 12
+SP = SP - 16
 M[SP] = .1 72
 M[SP+1] = .1 69
 M[SP + 2] = .1 76
@@ -12,8 +12,9 @@ M[SP+8] = .1 82
 M[SP+9] = .1 76
 M[SP+10] = .1 68
 M[SP+11] = .1 0
+M[SP+12 ] = SP
 SP = SP - 4
-R1 = SP + 4
+R1 = M[SP + 16]
 M[SP] = R1
 CALL <printStr>
 SP = SP + 4

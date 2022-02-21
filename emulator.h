@@ -24,9 +24,9 @@ void read_file(string filename);
 void read_functions();
 
 void process_file(string filename);
+void execute_file();
 void process_line();
 
-void execute_file();
 void branch(string& line);
 void store(string& line);
 void load(string& line);
@@ -35,8 +35,11 @@ void jump(string& line);
 void call_function(string& line);
 void execute_function(string func_name);
 void execute_prebuilt_function(string func_name);
+
+// built-in functions
 void call_printf();
 void call_strlen();
+void call_printStr();
 
 /**
  * @brief 

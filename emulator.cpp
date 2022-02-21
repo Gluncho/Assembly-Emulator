@@ -10,7 +10,7 @@ char M[MEMORY_SIZE];
 // registers
 map<string,int> registers;
 // built-in functions
-set<string> built_in_functions = {"printf", "strlen"};
+set<string> built_in_functions = {"printf", "strlen", "printStr"};
 
 //debugging mode
 static bool DEBUG = false;
@@ -23,13 +23,6 @@ void init(){
     memset(M, 0, sizeof(M));
 }
 int main(int argc, char* argv[]){
-    // cout<<(int)(char)(-256)<<endl;
-    // while(true){
-    //     int x;
-    //     cin>>x;
-    //     cout<<bitset<(32)>(x) <<endl;
-    // }
-    init();
     interact_with_user();
     return 0;
 }
@@ -140,6 +133,7 @@ void execute_function(string func_name){
 void execute_prebuilt_function(string func_name){
     if(func_name == PRINTF) call_printf();
     else if(func_name == STRLEN) call_strlen();
+    else if(func_name == PRINTSTR) call_printStr();
 }
 
 void process_line(){
@@ -344,25 +338,19 @@ void call_printf(){
     cout<<"\t\t-------------------------------------- EXECUTING PRINTF... ----------------------------------------------------"<<endl;
     cout<<"\t\t";
     int cur = registers[SP];
-    string arg = "";
-    while(M[cur] != '\0') arg += M[cur++];
-    int end = cur + 1;
-    string parsed = "";
-    for(int i = 0; i < arg.size(); i++){
-        if(arg[i] != '%') parsed +=arg[i];
-        else if(i<arg.size()-1 && arg[i+1] == 'd'){
-            parsed += to_string(*(int*)&M[end]);
-            end += 4;
-            i++;
-        }else if(i < arg.size() - 1 && arg[i+1] == 'c'){
-            parsed += M[end];
-            end++;
-        }
-    }
-    cout<<parsed<<endl;
+    cout<<*(int*)&M[cur]<<endl;
     cout<<"\t\t ----------------------------- PRINTF EXECUTION ENDED SUCCESSFULLY---------------------------------------------"<<endl;
 
 }
+
+void call_printStr(){
+    int char_pointer = *(int*)&M[registers[SP]];
+    cout<<"\t\t-------------------------------------- EXECUTING PRINTSTR... ----------------------------------------------------"<<endl;
+    cout<<"\t\t";
+    printf("%s\n", &M[char_pointer]);
+    cout<<"\t\t ----------------------------- PRINTF EXECUTION ENDED SUCCESSFULLY---------------------------------------------"<<endl;
+}
+
 void call_strlen(){
     int str_ind = *(int*)&M[registers[SP]];
     int len = 0;
