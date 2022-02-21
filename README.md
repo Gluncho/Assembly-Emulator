@@ -53,6 +53,7 @@ In order to compile and run the project, use the following commands:
    ```
 ### Execute an assembly file
 After running the project, you'll need to test it by a file in which assembly instructions are written. I've provided some [tests](https://github.com/Gluncho/Assembly-Emulator/tree/main/tests) which you can also use. If you want to know what particular test file really does, you must know that almost every test file has its corresponding C file, so if you're not familiar with those instructions, you can see what C code translates into this assembly file. For example, [tests/recursion/gcd.c](https://github.com/Gluncho/Assembly-Emulator/tree/main/tests/recursion/gcd.c) would translate into [tests/recursion/gcd](https://github.com/Gluncho/Assembly-Emulator/tree/main/tests/recursion/gcd)
+
 To test, you can just enter the filename in the command or type ```-help``` for more information about how to interact with command prompt.
 
 Here are two examples of how would you test [gcd](https://github.com/Gluncho/Assembly-Emulator/tree/main/tests/recursion/gcd) on Linux:
