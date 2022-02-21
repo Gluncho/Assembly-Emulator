@@ -388,8 +388,7 @@ void branch(string& line){
     else if(brc == BEQ && LHS == RHS) branch_should_jump = true;
     else if(brc == BNE && LHS != RHS) branch_should_jump = true;
     if(branch_should_jump){
-            if(DEBUG) cout<<"\tExecuting branch jump...."<<endl;
-            if(DEBUG) cout<<"\tJumping on line "<<toJump/4 + 1<<endl;
+            if(DEBUG) cout<<"\tExecuting branch jump....\n\tJumping on line "<<toJump/4 + 1<<endl;
             registers[PC] = toJump - INSTRUCTION_SIZE;
     }
 }

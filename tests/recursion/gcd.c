@@ -4,6 +4,5 @@ int gcd(int a, int b){
 }
 
 int main(){
-    printf("%d\n", gcd(178,200));
-    return 0;
+    return gcd(178, 200);
 }

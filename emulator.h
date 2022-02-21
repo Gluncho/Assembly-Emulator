@@ -3,6 +3,8 @@
 #include <bits/stdc++.h>
 #include "error.h"
 #include "keywords.h"
+
+//method responsible for everything in this project
 void interact_with_user();
 
 // displays bunch of text messages for user to understand what this is all about
