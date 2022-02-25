@@ -55,9 +55,10 @@ void help(){
     cout<<"\t----------------------------------------------------------HELP--------------------------------------------------------------"<<endl;
     cout<<"\t\tThis is an Assembly Emulator. "<<endl;
     cout<<"\t\tYou can use it to execute your own assembly code (Note: Should be a valid code that RISC processor uses."<<endl;
-    cout<<"\t\tIf you don't know the language, see \"Assembly Language Used.txt\" to get a grasp on it."<<endl;
+    cout<<"\t\tIf you don't know the language, see \"DOCUMENTATION.md\" to get a grasp on it."<<endl;
     cout<<"\t\tOtherwise, you can either run your own tests, or tests provided in \"tests\" folder"<<endl<<endl;
     cout<<"\t\tYou can run file with the debugging flag, which means that for each executed line,\n\tyou're gonna see what has really changed in the stack, or registers."<<endl;
+    cout<<"\t\tAnd also, you can see what is the type of the currently executing line."<<endl;
     cout<<"\t\tTo do that, you can use -dbg flag before entering a filename."<<endl;
     cout<<"\t----------------------------------------------------------------------------------------------------------------------------"<<endl;
 

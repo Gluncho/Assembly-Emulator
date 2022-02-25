@@ -1,20 +1,20 @@
 main:
 SP = SP - 12
-M[SP] = .1 72
-M[SP+1] = .1 69
-M[SP + 2] = .1 76
-M[SP+3] = .1 76
-M[SP+4] = .1 79
-M[SP+5] = .1 32
-M[SP+6] = .1 87
-M[SP+7] = .1 79
-M[SP+8] = .1 82
-M[SP+9] = .1 76
-M[SP+10] = .1 68
-M[SP+11] = .1 0
+Mem[SP] = .1 72
+Mem[SP+1] = .1 69
+Mem[SP + 2] = .1 76
+Mem[SP+3] = .1 76
+Mem[SP+4] = .1 79
+Mem[SP+5] = .1 32
+Mem[SP+6] = .1 87
+Mem[SP+7] = .1 79
+Mem[SP+8] = .1 82
+Mem[SP+9] = .1 76
+Mem[SP+10] = .1 68
+Mem[SP+11] = .1 0
 SP = SP - 4
 R1 = SP + 4
-M[SP] = R1
+Mem[SP] = R1
 CALL <printStr>
 SP = SP + 4
 SP = SP + 12
