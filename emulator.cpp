@@ -10,7 +10,7 @@ char M[MEMORY_SIZE];
 // registers
 map<string,int> registers;
 // built-in functions
-set<string> built_in_functions = {"printf", "strlen", "printStr"};
+set<string> built_in_functions = {"printf", "strlen", "printStr", "strcmp"};
 
 //debugging mode
 static bool DEBUG = false;
@@ -135,6 +135,7 @@ void execute_prebuilt_function(string func_name){
     if(func_name == PRINTF) call_printf();
     else if(func_name == STRLEN) call_strlen();
     else if(func_name == PRINTSTR) call_printStr();
+    else if(func_name == STRCMP) call_strcmp();
 }
 
 void process_line(){
@@ -155,7 +156,7 @@ void process_line(){
     }else if(type == LOAD){
         load(line);
     }else if(type == ALU){
-        perform_alu(line);
+        alu(line);
     }else if(type == JUMP){
         jump(line);
     }
@@ -358,6 +359,13 @@ void call_strlen(){
     while(M[str_ind++] != '\0') len++;
     registers[RV] = len;
 }
+void call_strcmp(){
+    int s1 = *(int*)&M[registers[SP]];
+    int s2 = *(int*)&M[registers[SP] + INSTRUCTION_SIZE];
+    printf("LOOOOOOOOOOOOOOOOOOL\n");
+    printf("%s\n%s\n", &M[s1], &M[s2]);
+    registers[RV] = strcmp(&M[s1], &M[s2]);
+}
 void branch(string& line){
     vector<string> splitted = multisplit(line);
     string expression = "";
@@ -432,7 +440,7 @@ void load(string& line){
     if(DEBUG) cout<<"\tREGISTER "<<LHS<<" NOW HAS A VALUE EQUAL TO "<<registers[LHS]<<endl;
 }
 
-void perform_alu(string& line){
+void alu(string& line){
     string LHS = trim(multisplit(line,'=')[0]);
     string RHS = remove_spaces(multisplit(line, '=')[1]);
     registers[LHS] = eval(RHS);

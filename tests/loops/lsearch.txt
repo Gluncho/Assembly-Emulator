@@ -1,0 +1,66 @@
+lsearch:
+SP = SP - 4
+M[SP] = 0
+R1 = M[SP]
+R2 = M[SP + 12]
+BGE R1 R2 PC+80
+SP = SP - 8
+R1 = M[SP+24]
+M[SP] = R1
+R2 = M[SP+16]
+R3 = M[SP+8]
+R4 = 4*R3
+R5 = R2 + R4
+R6 = M[R5]
+M[SP+4] = R6
+CALL <strcmp>
+SP = SP + 8
+BNE RV 0 PC+16
+RV = M[SP]
+SP = SP + 4
+RET
+R1 = M[SP]
+R2 = R1 + 1
+M[SP] = R2
+JMP PC - 84
+RV = -1
+SP = SP + 4
+RET
+main:
+SP = SP - 10
+M[SP] = .1 65
+M[SP + 1] = .1 0
+M[SP + 2] = .1 66
+M[SP+3]= .1 0
+M[SP+4]= .1 65
+M[SP+5] = .1 66
+M[SP + 6] = .1 0
+M[SP + 7] = .1 67
+M[SP + 8] = .1 68
+M[SP+9] = .1 0
+SP = SP - 16
+R1 = SP+16
+R2 = SP+18
+R3 = SP +20
+R4 = SP + 23
+M[SP] = R1
+M[SP+4] = R2
+M[SP+8] = R3
+M[SP+12] = R4
+SP = SP - 4
+R1 = SP + 4
+M[SP] = R1
+SP = SP - 12
+R1 = SP + 16
+M[SP] = R1
+M[SP + 4] = 4
+R1 = SP + 36
+M[SP + 8] = R1
+CALL <lsearch>
+SP = SP + 12
+SP = SP - 4
+M[SP] = RV
+CALL <printf>
+SP = SP + 4
+SP = SP + 30
+RET

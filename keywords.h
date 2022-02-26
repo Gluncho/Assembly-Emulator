@@ -22,6 +22,7 @@ using namespace std;
 #define PRINTF "printf"
 #define STRLEN "strlen"
 #define PRINTSTR "printStr"
+#define STRCMP "strcmp"
 
 //SPECIAL PREFIX/SUFFIX CHARACTERS
 #define OPEN_BRACKET '['
