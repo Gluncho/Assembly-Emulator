@@ -59,7 +59,9 @@ void help(){
     cout<<"\t\tOtherwise, you can either run your own tests, or tests provided in \"tests\" folder"<<endl<<endl;
     cout<<"\t\tYou can run file with the debugging flag, which means that for each executed line,\n\tyou're gonna see what has really changed in the stack, or registers."<<endl;
     cout<<"\t\tAnd also, you can see what is the type of the currently executing line."<<endl;
-    cout<<"\t\tTo do that, you can use -dbg flag before entering a filename."<<endl;
+    cout<<"\t\tTo do that, you can use -dbg flag before entering a filename."<<endl<<endl;
+    cout<<"\t\tNote that wherever there is a built-in function used in my tests, its better not to run it with debugging flag, \nyou'll see the output more clearly, ";
+    cout<<"but it's completely up to you."<<endl;
     cout<<"\t----------------------------------------------------------------------------------------------------------------------------"<<endl;
 
 }
