@@ -364,8 +364,6 @@ void call_strlen(){
 void call_strcmp(){
     int s1 = *(int*)&M[registers[SP]];
     int s2 = *(int*)&M[registers[SP] + INSTRUCTION_SIZE];
-    printf("LOOOOOOOOOOOOOOOOOOL\n");
-    printf("%s\n%s\n", &M[s1], &M[s2]);
     registers[RV] = strcmp(&M[s1], &M[s2]);
 }
 void branch(string& line){

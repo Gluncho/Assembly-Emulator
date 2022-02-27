@@ -1,6 +1,6 @@
 int lsearch(char** strings, int num_strings, char* target){
     for(int i = 0; i < num_strings; i++){
-        if(strcpy(target, strings[i]) == 0){
+        if(strcmp(target, strings[i]) == 0){
             return i;
         }
     }
