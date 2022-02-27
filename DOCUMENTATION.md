@@ -14,9 +14,10 @@ The following project:
 
 ## What's new?
 * Bitwise operations ( ```&```, ```|``` ) are added, among with modular ```%``` operation. Note that you can basically tell the program what operations it can use just by editing ```ops[]``` array in [keywords.h](https://github.com/Gluncho/Assembly-Emulator/blob/main/keywords.h) file.
-* Some built-in functions are added. Those functions currently are ```printStr, printf, strlen```.
+* Some built-in functions are added. Those functions currently are ```strlen, strcmp, printStr, printf```.
 ```
 strlen - takes char* as a parameter, and returns an integer - length of the respective string.
+strcmp - takes char* and char* as a parameter, compares two strings character by character. If the strings are equal, the function returns 0. works just as the strcmp() function used in C standart library.
 printStr - takes char* as a parameter, and prints the respective string.
-printf - takes an integer as a parameter, and prints the integer itself.
+printf - this is an easier version of the built-in printf function in C, and takes only an integer as a parameter and prints it afterwards.
 ```
