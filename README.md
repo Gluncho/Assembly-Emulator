@@ -6,7 +6,7 @@
 This is an Assembly Emulator written in C++ language. It supports an easier version of RISC (Reduced Instruction Set Computer) instruction set, so that it's more readable for user, and also easy to understand. Therefore, it does not support some fancier instructions or addressing modes featured by
 older Complex Instruction Set (CISC) designs. 
 
-_For more information about the language used, please refer to the [Documentation](https://example.com)_
+_For more information about the language used, please refer to the [Documentation](https://github.com/Gluncho/Assembly-Emulator/blob/main/DOCUMENTATION.md)_
 
 ### Built With
 * [C++](https://www.cplusplus.com/)
