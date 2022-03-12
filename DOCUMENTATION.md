@@ -9,7 +9,7 @@ There are few minor differences between the language described above and the lan
 The following project:
 * Does not support data conversions yet (it only works with integers, not floating numbers).
 * Does not need commas when using the branch, seperating tokens with spaces is enough. For example, you must replace ```BGE R1,R2,PC+12``` with something like ```BGE R1 R2 PC +12```
-* Currently uses the keyword `M` instead of `Mem`. But you change those kind of preferences in [keywords.h](https://github.com/Gluncho/Assembly-Emulator/blob/main/keywords.h) file and everything will run perfectly.
+* Currently uses the keyword `M` instead of `Mem`. But you can change those kind of preferences in [keywords.h](https://github.com/Gluncho/Assembly-Emulator/blob/main/keywords.h) file and everything will run perfectly.
 * Is mostly space-friendly. Which means that you can add extra spaces in tests almost everywhere, for example, ```R1=  M[       4+ SP]``` and ```R1=M[SP+4]``` would both be valid instructions
 
 ## What's new?
